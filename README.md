@@ -42,7 +42,9 @@ Click `CREATE NEW FUNCTION` on FaaS Gateway UI to deploy the function `functions
 
 ### Invoke a tester function
 
-`curl http://x.x.x.x:8080/function/nodeinfo`
+`curl http://x.x.x.x:8080/function/info`
+
+## Cleanup
 
 ### Remove the FaaS-hyper service
 
