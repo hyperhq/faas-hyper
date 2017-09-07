@@ -1,0 +1,22 @@
+version: '2'
+services:
+  faas-hyper:
+    image: imeoer/faas-hyper
+    hostname: faas-hyper
+    environment:
+      - HYPER_ACCESS_KEY=<HYPER_ACCESS_KEY>
+      - HYPER_SECRET_KEY=<HYPER_SECRET_KEY>
+    ports:
+      - 8080:8080
+    restart: always
+  gateway:
+    image: functions/gateway:0.6.4
+    hostname: faas-gateway
+    environment:
+      - functions_provider_url=http://faas-hyper:8080/
+    depends_on:
+      - faas-hyper
+    ports:
+      - 8080:8080
+    fip: <FIP>
+    restart: always
