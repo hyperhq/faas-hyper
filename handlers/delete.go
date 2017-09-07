@@ -9,7 +9,7 @@ import (
 
 func (hl *Handler) Delete(ctx echo.Context) error {
 	name := ctx.Param("name")
-	err := hl.Hyper.Delete(name)
+	err := hl.Hyper.Delete("faas-function-" + name)
 	if err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}

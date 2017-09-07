@@ -91,7 +91,7 @@ func (hyper *Hyper) List() ([]requests.Function, error) {
 		return nil, err
 	}
 
-	var functions []requests.Function
+	functions := make([]requests.Function, 0)
 	for _, container := range containers {
 		var replicas uint64
 
