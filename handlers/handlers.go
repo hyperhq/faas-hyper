@@ -1,6 +1,6 @@
 package handlers
 
-import "github.com/alexellis/faas-hyper/hyper"
+import "github.com/hyperhq/faas-hyper/hyper"
 
 type Handler struct {
 	*hyper.Hyper

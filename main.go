@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/alexellis/faas-hyper/handlers"
+	"github.com/hyperhq/faas-hyper/handlers"
 	"github.com/labstack/echo"
 )
 

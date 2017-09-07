@@ -1,8 +1,8 @@
 FROM golang:1.7.5
 
-RUN mkdir -p /go/src/github.com/alexellis/faas-hyper/
+RUN mkdir -p /go/src/github.com/hyperhq/faas-hyper/
 
-WORKDIR /go/src/github.com/alexellis/faas-hyper
+WORKDIR /go/src/github.com/hyperhq/faas-hyper
 
 COPY vendor vendor
 COPY handlers	handlers
