@@ -93,11 +93,9 @@ func (hyper *Hyper) List() ([]requests.Function, error) {
 
 	functions := make([]requests.Function, 0)
 	for _, container := range containers {
-		var replicas uint64
-
 		function := requests.Function{
 			Name:            strings.TrimPrefix(container.Names[0], "/faas-function-"),
-			Replicas:        replicas,
+			Replicas:        1,
 			Image:           container.Image,
 			InvocationCount: 0,
 		}
