@@ -13,15 +13,17 @@ func (hl *Handler) Deploy(ctx echo.Context) error {
 	if err := ctx.Bind(opts); err != nil {
 		return ctx.NoContent(http.StatusBadRequest)
 	}
-	if err := hl.Hyper.Create(opts.Service, opts.Image, buildEnvVars(opts)); err != nil {
+	envs, config := buildConfig(opts)
+	if err := hl.Hyper.Create(opts.Service, opts.Image, envs, config); err != nil {
 		return ctx.String(http.StatusInternalServerError, err.Error())
 	}
 	log.Println("Deployed function - " + opts.Service)
 	return ctx.NoContent(http.StatusAccepted)
 }
 
-func buildEnvVars(request *requests.CreateFunctionRequest) []string {
+func buildConfig(request *requests.CreateFunctionRequest) ([]string, map[string]string) {
 	envVars := []string{}
+	config := make(map[string]string)
 
 	if len(request.EnvProcess) > 0 {
 		envVar := "fprocess=" + request.EnvProcess
@@ -29,8 +31,12 @@ func buildEnvVars(request *requests.CreateFunctionRequest) []string {
 	}
 
 	for k, v := range request.EnvVars {
+		if k == "hyper_size" {
+			config["hyper_size"] = v
+			continue
+		}
 		envVar := k + "=" + v
 		envVars = append(envVars, envVar)
 	}
-	return envVars
+	return envVars, config
 }

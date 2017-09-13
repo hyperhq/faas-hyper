@@ -21,8 +21,12 @@ type Hyper struct {
 }
 
 func New() (*Hyper, error) {
+	region := os.Getenv("HYPER_REGION")
+	if region != "" {
+		region = "us-west-1"
+	}
 	var (
-		host          = "tcp://us-west-1.hyper.sh:443"
+		host          = "tcp://" + region + ".hyper.sh:443"
 		customHeaders = map[string]string{}
 		verStr        = "v1.23"
 		accessKey     = os.Getenv("HYPER_ACCESS_KEY")
@@ -43,7 +47,11 @@ func New() (*Hyper, error) {
 	return &Hyper{client}, nil
 }
 
-func (hyper *Hyper) Create(name, image string, envs []string) error {
+func (hyper *Hyper) Create(name, image string, envs []string, config map[string]string) error {
+	size := "s4"
+	if _, ok := config["hyper_size"]; ok {
+		size = config["hyper_size"]
+	}
 	hostName := "faas-function-" + name
 	res, err := hyper.ContainerCreate(
 		context.Background(),
@@ -52,7 +60,7 @@ func (hyper *Hyper) Create(name, image string, envs []string) error {
 			Hostname: hostName,
 			Env:      envs,
 			Labels: map[string]string{
-				"sh_hyper_instancetype": "s4",
+				"sh_hyper_instancetype": size,
 				"faas-function":         "true",
 			},
 			ExposedPorts: map[nat.Port]struct{}{
