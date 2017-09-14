@@ -3,8 +3,11 @@ package hyper
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/alexellis/faas/gateway/requests"
@@ -20,9 +23,48 @@ type Hyper struct {
 	*client.Client
 }
 
+type PrometheusQueryResponse struct {
+	Status string
+	Data   struct {
+		ResultType string
+		Result     []struct {
+			Metric struct {
+				FunctionName string `json:"function_name"`
+			}
+			Value []interface{}
+		}
+	}
+}
+
+func getInvocationCount(name string) float64 {
+	res, err := http.Get("http://faas-prometheus:9090/api/v1/query?query=gateway_function_invocation_total")
+	if err != nil {
+		return 0
+	}
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+	query := PrometheusQueryResponse{}
+	if err := json.Unmarshal(body, &query); err != nil {
+		return 0
+	}
+	for _, item := range query.Data.Result {
+		if item.Metric.FunctionName == name {
+			if len(item.Value) == 2 {
+				count := item.Value[1].(string)
+				if ret, err := strconv.ParseFloat(count, 64); err == nil {
+					return ret
+				}
+			}
+		}
+	}
+
+	return 0
+}
+
 func New() (*Hyper, error) {
 	region := os.Getenv("HYPER_REGION")
-	if region != "" {
+	if region == "" {
 		region = "us-west-1"
 	}
 	var (
@@ -101,11 +143,12 @@ func (hyper *Hyper) List() ([]requests.Function, error) {
 
 	functions := make([]requests.Function, 0)
 	for _, container := range containers {
+		name := strings.TrimPrefix(container.Names[0], "/faas-function-")
 		function := requests.Function{
-			Name:            strings.TrimPrefix(container.Names[0], "/faas-function-"),
+			Name:            name,
 			Replicas:        1,
 			Image:           container.Image,
-			InvocationCount: 0,
+			InvocationCount: getInvocationCount(name),
 		}
 		functions = append(functions, function)
 	}
