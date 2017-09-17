@@ -45,7 +45,12 @@ func (hl *Handler) Proxy(ctx echo.Context) error {
 	}
 	defer ctx.Request().Body.Close()
 
-	url := fmt.Sprintf("http://%s:%d/", "faas-function-"+service, watchdogPort)
+	serviceIP, found := hl.FuncMap["faas-function-"+service]
+	if !found {
+		return ctx.NoContent(http.StatusNotFound)
+	}
+
+	url := fmt.Sprintf("http://%s:%d/", serviceIP, watchdogPort)
 
 	request, _ := http.NewRequest("POST", url, bytes.NewReader(requestBody))
 

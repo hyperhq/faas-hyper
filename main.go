@@ -18,12 +18,14 @@ func main() {
 		srv.Logger.Fatal(err)
 	}
 
-	srv.Any("/function/:name", hl.Proxy)
-
-	srv.POST("/system/functions", hl.Deploy)
 	srv.GET("/system/functions", hl.List)
-	srv.GET("/system/functions/:name", hl.Inspect)
+	srv.POST("/system/functions", hl.Deploy)
 	srv.DELETE("/system/functions/:name", hl.Delete)
+
+	srv.GET("/system/function/:name", hl.Inspect)
+	srv.POST("/system/scale-function/:name", hl.Scale)
+
+	srv.Any("/function/:name", hl.Proxy)
 
 	srv.Logger.Fatal(srv.Start(":8080"))
 }

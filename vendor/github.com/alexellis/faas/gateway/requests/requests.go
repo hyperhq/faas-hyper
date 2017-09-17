@@ -34,6 +34,12 @@ type DeleteFunctionRequest struct {
 	FunctionName string `json:"functionName"`
 }
 
+// ScaleServiceRequest scale a deployed function
+type ScaleServiceRequest struct {
+	ServiceName string `json:"serviceName"`
+	Replicas    uint64 `json:"replicas"`
+}
+
 // PrometheusInnerAlertLabel PrometheusInnerAlertLabel
 type PrometheusInnerAlertLabel struct {
 	AlertName    string `json:"alertname"`

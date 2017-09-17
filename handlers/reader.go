@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/alexellis/faas/gateway/requests"
 	"github.com/labstack/echo"
 )
 
@@ -23,4 +24,20 @@ func (hl *Handler) Inspect(ctx echo.Context) error {
 	}
 	log.Println("Inspected function - " + name)
 	return ctx.JSON(http.StatusOK, function)
+}
+
+func (hl *Handler) Scale(ctx echo.Context) error {
+	name := ctx.Param("name")
+
+	opts := new(requests.ScaleServiceRequest)
+	if err := ctx.Bind(opts); err != nil {
+		return ctx.NoContent(http.StatusBadRequest)
+	}
+
+	err := hl.Hyper.Scale(name, opts.Replicas)
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	log.Println("Inspected function - " + name)
+	return ctx.NoContent(http.StatusOK)
 }

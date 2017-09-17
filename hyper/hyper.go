@@ -9,18 +9,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alexellis/faas/gateway/requests"
-	"github.com/docker/go-connections/nat"
 	"github.com/hyperhq/hyper-api/client"
 	"github.com/hyperhq/hyper-api/types"
-	"github.com/hyperhq/hyper-api/types/container"
-	"github.com/hyperhq/hyper-api/types/filters"
-	"github.com/hyperhq/hyper-api/types/network"
 )
 
 type Hyper struct {
 	*client.Client
+	FuncMap map[string]string // function name -> service ip
 }
 
 type PrometheusQueryResponse struct {
@@ -86,7 +84,16 @@ func New() (*Hyper, error) {
 		return nil, err
 	}
 
-	return &Hyper{client}, nil
+	hyper := &Hyper{client, make(map[string]string)}
+
+	if err = hyper.RefreshFuncMap(); err != nil {
+		return nil, err
+	}
+	time.AfterFunc(10*time.Second, func() {
+		hyper.RefreshFuncMap()
+	})
+
+	return hyper, nil
 }
 
 func (hyper *Hyper) Create(name, image string, envs []string, config map[string]string) error {
@@ -94,60 +101,67 @@ func (hyper *Hyper) Create(name, image string, envs []string, config map[string]
 	if _, ok := config["hyper_size"]; ok {
 		size = config["hyper_size"]
 	}
-	hostName := "faas-function-" + name
-	res, err := hyper.ContainerCreate(
+
+	fullName := "faas-function-" + name
+	service, err := hyper.ServiceCreate(
 		context.Background(),
-		&container.Config{
-			Image:    image,
-			Hostname: hostName,
-			Env:      envs,
+		types.Service{
+			Name:          fullName,
+			Image:         image,
+			ContainerSize: size,
+			ContainerPort: 8080,
+			Replicas:      1,
+			Protocol:      "http",
+			ServicePort:   8080,
+			Env:           envs,
 			Labels: map[string]string{
-				"sh_hyper_instancetype": size,
-				"faas-function":         "true",
-			},
-			ExposedPorts: map[nat.Port]struct{}{
-				"8080/tcp": {},
+				"faas-function": "true",
+				fullName:        "true",
 			},
 		},
-		&container.HostConfig{
-			PortBindings: nat.PortMap{
-				"8080/tcp": []nat.PortBinding{
-					nat.PortBinding{HostPort: "8080"},
-				},
-			},
-			RestartPolicy: container.RestartPolicy{
-				Name: "always",
-			},
-		},
-		&network.NetworkingConfig{},
-		hostName,
 	)
 	if err != nil {
 		return err
 	}
+	hyper.FuncMap[name] = service.IP
 
-	return hyper.ContainerStart(context.Background(), res.ID, "")
+	return nil
+}
+
+func (hyper *Hyper) RefreshFuncMap() error {
+	services, err := hyper.ServiceList(context.Background(), types.ServiceListOptions{})
+	if err != nil {
+		return err
+	}
+	funcMap := make(map[string]string)
+	for _, service := range services {
+		isFunc := strings.HasPrefix(service.Name, "faas-function-")
+		if !isFunc {
+			continue
+		}
+		funcMap[service.Name] = service.IP
+	}
+	hyper.FuncMap = funcMap
+	return nil
 }
 
 func (hyper *Hyper) List() ([]requests.Function, error) {
-	args := filters.NewArgs()
-	args.Add("label", "faas-function=true")
-
-	containers, err := hyper.ContainerList(context.Background(), types.ContainerListOptions{
-		All:    true,
-		Filter: args,
-	})
+	services, err := hyper.ServiceList(context.Background(), types.ServiceListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	functions := make([]requests.Function, 0)
-	for _, container := range containers {
-		name := strings.TrimPrefix(container.Names[0], "/faas-function-")
+	for _, service := range services {
+		isFunc := strings.HasPrefix(service.Name, "faas-function-")
+		if !isFunc {
+			continue
+		}
+		name := strings.TrimPrefix(service.Name, "faas-function-")
 		function := requests.Function{
 			Name:            name,
-			Replicas:        1,
-			Image:           container.Image,
+			Replicas:        uint64(service.Replicas),
+			Image:           service.Image,
 			InvocationCount: getInvocationCount(name),
 		}
 		functions = append(functions, function)
@@ -157,19 +171,10 @@ func (hyper *Hyper) List() ([]requests.Function, error) {
 }
 
 func (hyper *Hyper) Delete(name string) error {
-	args := filters.NewArgs()
-	args.Add("v", "1")
-	args.Add("force", "1")
-
-	_, err := hyper.ContainerRemove(context.Background(), name, types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		RemoveLinks:   true,
-		Force:         true,
-	})
+	err := hyper.ServiceDelete(context.Background(), name, false)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -184,4 +189,12 @@ func (hyper *Hyper) Inspect(name string) (*requests.Function, error) {
 		}
 	}
 	return nil, nil
+}
+
+func (hyper *Hyper) Scale(name string, replica uint64) error {
+	count := int(replica)
+	_, err := hyper.ServiceUpdate(context.Background(), "faas-function-"+name, types.ServiceUpdate{
+		Replicas: &count,
+	})
+	return err
 }
