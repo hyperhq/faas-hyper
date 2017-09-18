@@ -89,9 +89,12 @@ func New() (*Hyper, error) {
 	if err = hyper.RefreshFuncMap(); err != nil {
 		return nil, err
 	}
-	time.AfterFunc(10*time.Second, func() {
-		hyper.RefreshFuncMap()
-	})
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			hyper.RefreshFuncMap()
+		}
+	}()
 
 	return hyper, nil
 }
@@ -123,7 +126,9 @@ func (hyper *Hyper) Create(name, image string, envs []string, config map[string]
 	if err != nil {
 		return err
 	}
-	hyper.FuncMap[name] = service.IP
+	if service.IP != "" {
+		hyper.FuncMap[fullName] = service.IP
+	}
 
 	return nil
 }
