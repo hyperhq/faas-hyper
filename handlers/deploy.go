@@ -11,14 +11,16 @@ import (
 func (hl *Handler) Deploy(ctx echo.Context) error {
 	opts := new(requests.CreateFunctionRequest)
 	if err := ctx.Bind(opts); err != nil {
-		return ctx.NoContent(http.StatusBadRequest)
+		ctx.NoContent(http.StatusBadRequest)
+		return err
 	}
 	envs, config := buildConfig(opts)
 	if err := hl.Hyper.Create(opts.Service, opts.Image, envs, config); err != nil {
-		return ctx.String(http.StatusInternalServerError, err.Error())
+		ctx.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
 	log.Println("Deployed function - " + opts.Service)
-	return ctx.NoContent(http.StatusAccepted)
+	return ctx.NoContent(http.StatusCreated)
 }
 
 func buildConfig(request *requests.CreateFunctionRequest) ([]string, map[string]string) {

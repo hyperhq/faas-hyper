@@ -4,15 +4,21 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/alexellis/faas/gateway/requests"
 	"github.com/labstack/echo"
 )
 
 func (hl *Handler) Delete(ctx echo.Context) error {
-	name := ctx.Param("name")
-	err := hl.Hyper.Delete("faas-function-" + name)
-	if err != nil {
-		return ctx.String(http.StatusInternalServerError, err.Error())
+	opts := new(requests.DeleteFunctionRequest)
+	if err := ctx.Bind(opts); err != nil {
+		ctx.NoContent(http.StatusBadRequest)
+		return err
 	}
-	log.Println("Deleted function - " + name)
-	return ctx.NoContent(http.StatusNoContent)
+	err := hl.Hyper.Delete("faas-function-" + opts.FunctionName)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+	log.Println("Deleted function - " + opts.FunctionName)
+	return ctx.NoContent(http.StatusOK)
 }

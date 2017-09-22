@@ -32,3 +32,4 @@ services:
       - alertmanager
     environment:
       no_proxy: "gateway"
+    restart: always

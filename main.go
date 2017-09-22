@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/hyperhq/faas-hyper/handlers"
 	"github.com/labstack/echo"
 )
@@ -18,9 +20,13 @@ func main() {
 		srv.Logger.Fatal(err)
 	}
 
+	srv.HTTPErrorHandler = func(err error, c echo.Context) {
+		log.Printf("%s %s %s", c.Request().Method, c.Path(), err)
+	}
+
 	srv.GET("/system/functions", hl.List)
 	srv.POST("/system/functions", hl.Deploy)
-	srv.DELETE("/system/functions/:name", hl.Delete)
+	srv.DELETE("/system/functions", hl.Delete)
 
 	srv.GET("/system/function/:name", hl.Inspect)
 	srv.POST("/system/scale-function/:name", hl.Scale)
