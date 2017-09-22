@@ -4,6 +4,7 @@ services:
     image: imeoer/faas-hyper
     hostname: faas-hyper
     environment:
+      - HYPER_REGION=<HYPER_REGION>
       - HYPER_ACCESS_KEY=<HYPER_ACCESS_KEY>
       - HYPER_SECRET_KEY=<HYPER_SECRET_KEY>
     ports:

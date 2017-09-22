@@ -22,6 +22,7 @@ Copy `docker-compose-tpl.yml` file to `docker-compose.yml`.
 
 Edit the `docker-compose.yml` and input environment variables using the values above:
 
+- `<HYPER_REGION>`: insert `us-west-1` or `eu-central-1`
 - `<HYPER_ACCESS_KEY>`: insert `Access Key`
 - `<HYPER_SECRET_KEY>`: insert `Secret Key`
 - `<FIP>`: insert `x.x.x.x`
