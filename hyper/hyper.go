@@ -126,6 +126,20 @@ func (hyper *Hyper) Create(name, image string, envs []string, config map[string]
 	if err != nil {
 		return err
 	}
+	loop := 0
+	function := &requests.Function{}
+	for {
+		function, err = hyper.Inspect(name)
+		if (err == nil && function != nil && function.Replicas >= 1) || loop >= 60 {
+			break
+		}
+		time.Sleep(time.Second * 1)
+		loop++
+	}
+	service, err = hyper.ServiceInspect(context.Background(), service.Name)
+	if err != nil {
+		return err
+	}
 	if service.IP != "" {
 		hyper.FuncMap[fullName] = service.IP
 	}
@@ -165,7 +179,7 @@ func (hyper *Hyper) List() ([]requests.Function, error) {
 		name := strings.TrimPrefix(service.Name, "faas-function-")
 		function := requests.Function{
 			Name:            name,
-			Replicas:        uint64(service.Replicas),
+			Replicas:        uint64(len(service.Containers)),
 			Image:           service.Image,
 			InvocationCount: getInvocationCount(name),
 		}

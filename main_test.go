@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/alexellis/faas/gateway/requests"
 )
@@ -74,8 +73,6 @@ func TestDeploy(t *testing.T) {
 		t.Logf("got %d, wanted %d", res.StatusCode, http.StatusCreated)
 		t.Fail()
 	}
-
-	time.Sleep(time.Second * 20) // Waiting for service scale ready
 }
 
 func TestList(t *testing.T) {
